@@ -73,3 +73,8 @@ This program differs from `column -t` in the following ways:
 - Empty lines aren't deleted.
 - The text keeps its indentation.
 - You can align right.
+
+License
+-------
+
+MIT

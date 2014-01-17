@@ -5,13 +5,13 @@
 #include <stdbool.h> 
 
 struct word {
-	struct word *link;
-	char        *val;
-	size_t      len;
+	void   *link; // we can't use struct word * here because of strict aliasing
+	char   *val;
+	size_t len;
 };
 
 struct line {
-	struct line *link;
+	void        *link;
 	struct word *words;
 };
 

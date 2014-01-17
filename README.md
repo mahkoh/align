@@ -6,11 +6,13 @@ Align text.
 Usage
 -----
 
-    align [-h] [-r] [-o <separator>] [file]
+    align [-s <string delimiter>] [-h] [-r] [-o <output separator>] [file]
 
 Reads from `stdin` by default.
 If `-r` is given, the text is aligned right (default: left).
 If `-o <separator>` is given, `<separator>` is inserted in between the columns (default: `" "`).
+If `-s <delimiter>` is given, `<delimiter>` is used as a string delimiter (default: `'"'`).
+Use `-s ""` to ignore strings.
 
 Example
 -------

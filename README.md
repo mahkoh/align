@@ -9,10 +9,11 @@ Usage
     align [-s <string delimiter>] [-h] [-r] [-o <output separator>] [file]
 
 Reads from `stdin` by default.
-If `-r` is given, the text is aligned right (default: left).
-If `-o <separator>` is given, `<separator>` is inserted in between the columns (default: `" "`).
-If `-s <delimiter>` is given, `<delimiter>` is used as a string delimiter (default: `'"'`).
-Use `-s ""` to ignore strings.
+
+- `-r`: Align right (default: left)
+- `-o <separator>`: Insert `<separator>` in between the columns (default: `" "`)
+- `-s <delimiter>`: Use `<delimiter>` as string delimiter (default: `'"'`) (use `-s ""` to ignore strings)
+- `-u <column>`: Only align text up to `<column>`
 
 Example
 -------

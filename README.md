@@ -6,7 +6,7 @@ Align text.
 Usage
 -----
 
-    align [-s <string delimiter>] [-h] [-r] [-o <output separator>] [file]
+    align [-h] [-r] [-o <output separator>] [-s <string delimiter>] [-u] [file]
 
 Reads from `stdin` by default.
 

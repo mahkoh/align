@@ -52,13 +52,13 @@ static bool is_indent(int c)
 	return c == ' ' || c == '\t';
 }
 
-static size_t read_word(char *line)
+static size_t read_word(char *line, char sd)
 {
 	size_t c = 0;
 	bool esc = false;
 	bool str = false;
 	for (; line[c]; c++) {
-		if (!esc && line[c] == '"')
+		if (!esc && line[c] == sd)
 			str = !str;
 		esc = !esc && line[c] == '\\';
 		if (line[c] == '\n' || (!str && isspace(line[c])))
@@ -67,30 +67,45 @@ static size_t read_word(char *line)
 	return c;
 }
 
+static char *read_argument(char name, char **argv)
+{
+	if (!*argv) {
+		fprintf(stderr, "-%c needs an argument\n", name);
+		exit(1);
+	}
+	return *argv;
+}
+
 int main(int argc, char **argv)
 {
 	FILE *in              = stdin;
 	bool right_align      = false;
-	const char *os        = " ";
+	char sd               = '"'; // string delimiter
+	const char *os        = " "; // output separator
 	const char *prog_name = *argv++;
 
 	for (; *argv; argv++) {
-		if (strcmp(*argv, "-r") == 0) {
-			right_align = true;
-		} else if (strcmp(*argv, "-o") == 0) {
-			argv++;
-			if (!*argv) {
-				fprintf(stderr, "-o needs an argument\n");
-				return 1;
-			}
-			os = *argv;
-		} else if (strcmp(*argv, "-h") == 0) {
-			printf("%s [-h] [-r] [-o <separator>] [file]\n", prog_name);
-			return 0;
-		} else {
+		if (**argv != '-')
 			break;
+		switch (argv[0][1]) {
+		case 'r': right_align = true; break;
+		case 'o': os = read_argument('o', ++argv);    break;
+		case 's': sd = read_argument('s', ++argv)[0]; break;
+		case 'h':
+			printf("%s [-s <string delimiter>] "
+			          "[-h] "
+			          "[-r] "
+			          "[-o <output separator>] "
+			          "[file]\n"
+			          , prog_name);
+			return 0;
+		case '-': argv++; goto NO_FLAG;
+		default:
+			fprintf(stderr, "Unknown flag -%c\n", **argv ? **argv : ' ');
+			return 1;
 		}
 	}
+NO_FLAG:
 	if (*argv) {
 		in = fopen(*argv, "r");
 		if (!in) {
@@ -99,12 +114,12 @@ int main(int argc, char **argv)
 		}
 	}
 
-	size_t max_col     = 0;                            
+	size_t max_col     = 0;
 	size_t *max_width  = calloc(1, sizeof(*max_width));
-	struct line *lines = NULL;                         
-	char   *line_p     = NULL;                         
-	size_t n           = 0;         
-	char   *indent     = NULL;                         
+	struct line *lines = NULL;
+	char   *line_p     = NULL;
+	size_t n           = 0;
+	char   *indent     = NULL;
 	while (getline(&line_p, &n, in) != -1) {
 		char *line = line_p;
 		if (!indent) {
@@ -116,7 +131,7 @@ int main(int argc, char **argv)
 		for (; isspace(*line); line++);
 		struct word *words = NULL;
 		for (size_t col = 0; *line; col++) {
-			size_t c = read_word(line);
+			size_t c = read_word(line, sd);
 			words = word_new(words, c, strndup(line, c));
 			if (col > max_col) {
 				max_col = col;
@@ -150,9 +165,9 @@ int main(int argc, char **argv)
 				fwrite(padding, max_width[col]-w->len, 1, stdout);
 				fwrite(w->val,  w->len,                1, stdout);
 			} else {
-				fwrite(w->val,  w->len,                1, stdout); 
+				fwrite(w->val,  w->len,                1, stdout);
 				if (w->link)
-					fwrite(padding, max_width[col]-w->len, 1, stdout); 
+					fwrite(padding, max_width[col]-w->len, 1, stdout);
 			}
 			w = w->link;
 			if (w)

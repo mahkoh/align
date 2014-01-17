@@ -15,6 +15,57 @@ struct line {
 	struct word *words;
 };
 
+static char       string_delimiter  = '"';
+static const char *output_separator = " ";
+static bool       align_right       = false;
+static size_t     until             = 0;
+
+static char *read_argument(char name, char **argv)
+{
+	if (!*argv) {
+		fprintf(stderr, "-%c needs an argument\n", name);
+		exit(1);
+	}
+	return *argv;
+}
+
+static char **parse_flags(char **argv)
+{
+	char *prog_name = *argv++;
+	for (; *argv; argv++) {
+		if (**argv != '-')
+			break;
+		switch (argv[0][1]) {
+		case 'r':
+			align_right = true;
+			break;
+		case 'o':
+			output_separator = read_argument('o', ++argv);
+			break;
+		case 's':
+			string_delimiter = read_argument('s', ++argv)[0];
+			break;
+		case 'u':
+			until = strtoul(*++argv, NULL, 10);
+			break;
+		case 'h':
+			printf("%s [-s <string delimiter>] "
+			          "[-h] "
+			          "[-r] "
+			          "[-o <output separator>] "
+			          "[file]\n"
+			          , prog_name);
+			exit(0);
+		case '-':
+			return ++argv;
+		default:
+			fprintf(stderr, "Unknown flag -%c\n", **argv ? **argv : ' ');
+			exit(1);
+		}
+	}
+	return argv;
+}
+
 // reverse singly-linked list
 static void *rev(void *end)
 {
@@ -52,13 +103,13 @@ static bool is_indent(int c)
 	return c == ' ' || c == '\t';
 }
 
-static size_t read_word(char *line, char sd)
+static size_t read_word(char *line)
 {
 	size_t c = 0;
 	bool esc = false;
 	bool str = false;
 	for (; line[c]; c++) {
-		if (!esc && line[c] == sd)
+		if (!esc && line[c] == string_delimiter)
 			str = !str;
 		esc = !esc && line[c] == '\\';
 		if (line[c] == '\n' || (!str && isspace(line[c])))
@@ -67,45 +118,11 @@ static size_t read_word(char *line, char sd)
 	return c;
 }
 
-static char *read_argument(char name, char **argv)
-{
-	if (!*argv) {
-		fprintf(stderr, "-%c needs an argument\n", name);
-		exit(1);
-	}
-	return *argv;
-}
-
 int main(int argc, char **argv)
 {
-	FILE *in              = stdin;
-	bool right_align      = false;
-	char sd               = '"'; // string delimiter
-	const char *os        = " "; // output separator
-	const char *prog_name = *argv++;
+	argv = parse_flags(argv);
 
-	for (; *argv; argv++) {
-		if (**argv != '-')
-			break;
-		switch (argv[0][1]) {
-		case 'r': right_align = true; break;
-		case 'o': os = read_argument('o', ++argv);    break;
-		case 's': sd = read_argument('s', ++argv)[0]; break;
-		case 'h':
-			printf("%s [-s <string delimiter>] "
-			          "[-h] "
-			          "[-r] "
-			          "[-o <output separator>] "
-			          "[file]\n"
-			          , prog_name);
-			return 0;
-		case '-': argv++; goto NO_FLAG;
-		default:
-			fprintf(stderr, "Unknown flag -%c\n", **argv ? **argv : ' ');
-			return 1;
-		}
-	}
-NO_FLAG:
+	FILE *in = stdin;
 	if (*argv) {
 		in = fopen(*argv, "r");
 		if (!in) {
@@ -131,7 +148,12 @@ NO_FLAG:
 		for (; isspace(*line); line++);
 		struct word *words = NULL;
 		for (size_t col = 0; *line; col++) {
-			size_t c = read_word(line, sd);
+			if (until && col == until) {
+				size_t c = strlen(line);
+				words = word_new(words, c, strndup(line, c));
+				break;
+			}
+			size_t c = read_word(line);
 			words = word_new(words, c, strndup(line, c));
 			if (col > max_col) {
 				max_col = col;
@@ -161,7 +183,11 @@ NO_FLAG:
 		if (w)
 			fputs(indent, stdout);
 		for (size_t col = 0; w; col++) {
-			if (right_align) {
+			if (until && col == until) {
+				fwrite(w->val, w->len-1, 1, stdout);
+				break;
+			}
+			if (align_right) {
 				fwrite(padding, max_width[col]-w->len, 1, stdout);
 				fwrite(w->val,  w->len,                1, stdout);
 			} else {
@@ -171,7 +197,7 @@ NO_FLAG:
 			}
 			w = w->link;
 			if (w)
-				fputs(os, stdout);
+				fputs(output_separator, stdout);
 		}
 		fputs("\n", stdout);
 	}

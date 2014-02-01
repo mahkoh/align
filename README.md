@@ -6,9 +6,9 @@ Align text.
 Usage
 -----
 
-    align [-h] [-r] [-o <output separator>] [-s <string delimiter>] [-u] [file]
+    align [-h] [-r] [-o <output separator>] [-s <string delimiter>] [-u]
 
-Reads from `stdin` by default.
+Reads from `stdin` and writes to `stdout`.
 
 - `-r`: Align right (default: left)
 - `-o <separator>`: Insert `<separator>` in between the columns (default: `" "`)

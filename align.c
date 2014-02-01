@@ -29,7 +29,7 @@ static char *read_argument(char name, char **argv)
 	return *argv;
 }
 
-static char **parse_flags(char **argv)
+static void parse_cmd_line(char **argv)
 {
 	char *prog_name = *argv++;
 	for (; *argv; argv++) {
@@ -52,18 +52,14 @@ static char **parse_flags(char **argv)
 			printf("%s [-s <string delimiter>] "
 			          "[-h] "
 			          "[-r] "
-			          "[-o <output separator>] "
-			          "[file]\n"
+			          "[-o <output separator>]\n"
 			          , prog_name);
 			exit(0);
-		case '-':
-			return ++argv;
 		default:
 			fprintf(stderr, "Unknown flag -%c\n", **argv ? **argv : ' ');
 			exit(1);
 		}
 	}
-	return argv;
 }
 
 // reverse singly-linked list
@@ -120,16 +116,7 @@ static size_t read_word(char *line)
 
 int main(int argc, char **argv)
 {
-	argv = parse_flags(argv);
-
-	FILE *in = stdin;
-	if (*argv) {
-		in = fopen(*argv, "r");
-		if (!in) {
-			fprintf(stderr, "can't open file\n");
-			return 1;
-		}
-	}
+	parse_cmd_line(argv);
 
 	size_t max_col     = 0;
 	size_t *max_width  = calloc(1, sizeof(*max_width));
@@ -137,7 +124,7 @@ int main(int argc, char **argv)
 	char   *line_p     = NULL;
 	size_t n           = 0;
 	char   *indent     = NULL;
-	while (getline(&line_p, &n, in) != -1) {
+	while (getline(&line_p, &n, stdin) != -1) {
 		char *line = line_p;
 		if (!indent) {
 			while(is_indent(*line))

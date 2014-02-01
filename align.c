@@ -15,10 +15,16 @@ struct line {
 	struct word *words;
 };
 
+struct dir {
+	size_t pad;
+	long   dir;
+};
+
 static char       string_delimiter  = '"';
 static const char *output_separator = " ";
-static bool       align_right       = false;
 static size_t     until             = 0;
+static struct dir *dirs             = NULL;
+static size_t     max_dir           = 0;
 
 static char *read_argument(char name, char **argv)
 {
@@ -36,9 +42,6 @@ static void parse_cmd_line(char **argv)
 		if (**argv != '-')
 			break;
 		switch (argv[0][1]) {
-		case 'r':
-			align_right = true;
-			break;
 		case 'o':
 			output_separator = read_argument('o', ++argv);
 			break;
@@ -46,20 +49,50 @@ static void parse_cmd_line(char **argv)
 			string_delimiter = read_argument('s', ++argv)[0];
 			break;
 		case 'u':
-			until = strtoul(*++argv, NULL, 10);
+			until = strtoul(read_argument('u', ++argv), NULL, 10);
 			break;
 		case 'h':
-			printf("%s [-s <string delimiter>] "
-			          "[-h] "
-			          "[-r] "
-			          "[-o <output separator>]\n"
-			          , prog_name);
+			printf("%s"
+			       " [-h]"
+			       " [-o <output separator>]"
+			       " [-s <string delimiter>]"
+			       " [-u <until>]"
+			       " [format]"
+			       "\n"
+			       , prog_name);
 			exit(0);
 		default:
 			fprintf(stderr, "Unknown flag -%c\n", **argv ? **argv : ' ');
 			exit(1);
 		}
 	}
+	if (!*argv) {
+		dirs = malloc(sizeof(*dirs));
+		dirs->dir = '<';
+		dirs->pad = 0;
+		return;
+	}
+	char *fmt = *argv;
+	struct dir *dir = dirs = malloc(sizeof(*dirs)*strlen(fmt));
+	for (; *fmt; fmt++, dir++) {
+		if (*fmt >= '0' && *fmt <= '9')
+			dir->pad = strtoul(fmt, &fmt, 10);
+		else
+			dir->pad = 0;
+		switch (*fmt) {
+		case '<':
+		case '>':
+		case '=':
+			dir->dir = *fmt;
+			break;
+		default:
+			fprintf(stderr, "Unknown format character %c\n", *fmt);
+			exit(1);
+		}
+	}
+	ssize_t max_dir_tmp = dir - dirs - 1;
+	if (max_dir_tmp > 0)
+		max_dir = (size_t)max_dir_tmp;
 }
 
 // reverse singly-linked list
@@ -118,8 +151,11 @@ int main(int argc, char **argv)
 {
 	parse_cmd_line(argv);
 
-	size_t max_col     = 0;
-	size_t *max_width  = calloc(1, sizeof(*max_width));
+	size_t max_col     = max_dir;
+	size_t *max_width  = calloc(max_col+1, sizeof(*max_width));
+	for (size_t i = 0; i <= max_dir; i++)
+		max_width[i] = dirs[i].pad;
+
 	struct line *lines = NULL;
 	char   *line_p     = NULL;
 	size_t n           = 0;
@@ -174,13 +210,26 @@ int main(int argc, char **argv)
 				fwrite(w->val, w->len-1, 1, stdout);
 				break;
 			}
-			if (align_right) {
-				fwrite(padding, max_width[col]-w->len, 1, stdout);
-				fwrite(w->val,  w->len,                1, stdout);
-			} else {
-				fwrite(w->val,  w->len,                1, stdout);
+			long dir = col <= max_dir ? dirs[col].dir : dirs[max_dir].dir;
+			size_t pl, pr;
+			switch (dir) {
+			case '<':
+				fwrite(w->val, w->len, 1, stdout);
 				if (w->link)
 					fwrite(padding, max_width[col]-w->len, 1, stdout);
+				break;
+			case '>':
+				fwrite(padding, max_width[col]-w->len, 1, stdout);
+				fwrite(w->val,  w->len,                1, stdout);
+				break;
+			case '=':
+				pl = (max_width[col] - w->len)/2;
+				pr = max_width[col] - w->len - pl;
+				fwrite(padding, pl,     1, stdout);
+				fwrite(w->val,  w->len, 1, stdout);
+				if (w->link)
+					fwrite(padding, pr, 1, stdout);
+				break;
 			}
 			w = w->link;
 			if (w)

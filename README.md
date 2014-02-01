@@ -3,6 +3,8 @@ align
 
 Align text.
 
+[![Build Status](https://travis-ci.org/mahkoh/align.png?branch=master)](https://travis-ci.org/mahkoh/align)
+
 Usage
 -----
 

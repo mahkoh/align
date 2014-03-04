@@ -62,7 +62,7 @@ static void parse_cmd_line(char **argv)
 			       , prog_name);
 			exit(0);
 		default:
-			fprintf(stderr, "Unknown flag -%c\n", **argv ? **argv : ' ');
+			fprintf(stderr, "Unknown flag -%c\n", argv[0][1] ? argv[0][1] : ' ');
 			exit(1);
 		}
 	}

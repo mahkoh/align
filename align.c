@@ -149,6 +149,7 @@ static size_t read_word(char *line)
 
 int main(int argc, char **argv)
 {
+	(void)argc;
 	parse_cmd_line(argv);
 
 	size_t max_col     = max_dir;
